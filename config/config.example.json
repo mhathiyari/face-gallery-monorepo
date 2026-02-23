@@ -1,0 +1,53 @@
+{
+  "_comment": "Face Gallery Configuration File",
+
+  "paths": {
+    "photos_dir": "./data/photos",
+    "collections_dir": "./data/collections",
+    "uploads_dir": "./data/uploads",
+    "backend_root": "../backend"
+  },
+
+  "server": {
+    "host": "0.0.0.0",
+    "port": 5050,
+    "debug": false
+  },
+
+  "model": {
+    "name": "buffalo_l",
+    "device": "auto",
+    "_device_options": ["auto", "cuda", "cpu", "mps"],
+    "min_confidence": 0.5
+  },
+
+  "clustering": {
+    "eps": 0.6,
+    "min_samples": 2,
+    "_eps_comment": "Lower eps = stricter matching, higher eps = looser matching. Range: 0.4-0.8"
+  },
+
+  "indexing": {
+    "batch_size": 32,
+    "enable_deduplication": true,
+    "checkpoint_interval": 100,
+    "_batch_size_comment": "Lower for less GPU memory, higher for faster processing"
+  },
+
+  "search": {
+    "max_results": 10,
+    "min_similarity": 0.8
+  },
+
+  "drive": {
+    "credentials_path": "./credentials.json",
+    "token_path": "./token.json",
+    "enabled": false,
+    "_comment": "Set enabled to true and provide OAuth credentials for Google Drive sharing"
+  },
+
+  "security": {
+    "root_dir": "~",
+    "_comment": "Root directory for file access security. All file operations must be within this directory. Set to '~' for home directory or '/' to allow access to entire filesystem (use with caution)"
+  }
+}

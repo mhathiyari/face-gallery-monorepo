@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Face Search Viewer</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="grain"></div>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Face Search Viewer</p>
+        <h1>Local Collections, Shared on LAN</h1>
+      </div>
+      <div class="owner-toggle">
+        <label class="switch">
+          <input type="checkbox" id="ownerMode" />
+          <span class="slider"></span>
+        </label>
+        <span>Owner mode</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>Collections</h2>
+        <div class="collection-form">
+          <input id="collectionPath" type="text" placeholder="/path/to/sorted_output" />
+          <button id="addCollection">Add collection</button>
+        </div>
+        <div id="collectionsList" class="list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Sort Job</h2>
+        <div class="job-form">
+          <input id="inputFolder" type="text" placeholder="/path/to/photos" />
+          <input id="outputFolder" type="text" placeholder="/path/to/sorted_output" />
+          <button id="startJob">Start sorting</button>
+        </div>
+        <div class="job-status">
+          <p id="jobState">No job running.</p>
+          <pre id="jobLogs"></pre>
+        </div>
+      </section>
+
+      <section class="panel span-2">
+        <div class="section-header">
+          <h2>People</h2>
+          <div class="filters">
+            <select id="sortMode">
+              <option value="name">Sort by name</option>
+              <option value="size">Sort by size</option>
+            </select>
+            <button id="refreshPeople">Refresh</button>
+          </div>
+        </div>
+        <div id="peopleGrid" class="grid"></div>
+      </section>
+
+      <section class="panel span-2">
+        <div class="section-header">
+          <h2>Person Detail</h2>
+          <div class="detail-actions">
+            <label class="mode-toggle">
+              <input type="checkbox" id="cropMode" checked />
+              <span>Show face crops</span>
+            </label>
+            <input id="personLabel" type="text" placeholder="Rename person" />
+            <button id="saveLabel">Save label</button>
+          </div>
+        </div>
+        <div id="personMeta" class="meta"></div>
+        <div id="personImages" class="grid images"></div>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Find Person</h2>
+        <div class="search-form">
+          <input id="searchImage" type="file" accept="image/*" />
+          <button id="runSearch">Search</button>
+        </div>
+        <div id="searchResult" class="search-result"></div>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Sharing</h2>
+        <div class="share-form">
+          <button id="uploadGallery">Upload gallery (one link)</button>
+          <button id="uploadPeople">Upload people (links per person)</button>
+        </div>
+        <div class="share-status">
+          <p id="shareStatus">No uploads yet.</p>
+          <div id="shareLinks"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,105 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# Data directories
+data/photos/*
+data/collections/*
+data/uploads/*
+!data/photos/.gitkeep
+!data/collections/.gitkeep
+!data/uploads/.gitkeep
+
+# Config files (keep examples)
+config/config.json
+.env
+
+# Credentials
+credentials.json
+token.json
+*.pem
+*.key
+
+# Logs
+*.log
+logs/
+server.log
+
+# Temporary files
+*.tmp
+tmp/
+temp/
+
+# Collections metadata
+collections.json
+settings.json
+labels.json
+shares.json
+
+# Model files (if downloaded locally)
+*.onnx
+*.pth
+*.pt
+models/
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+.directory

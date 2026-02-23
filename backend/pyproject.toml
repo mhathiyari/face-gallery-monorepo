@@ -1,0 +1,140 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "face-search"
+version = "0.1.0"
+description = "Offline, GPU-accelerated face recognition search system (AWS Rekognition alternative)"
+authors = [{name = "Mustafa Hathiyari", email = "mustafa@example.com"}]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "numpy>=1.26.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "opencv-python>=4.9.0",
+    "pillow>=10.2.0",
+    "insightface>=0.7.3",
+    "onnxruntime>=1.17.0",
+    "sqlalchemy>=2.0.28",
+    "alembic>=1.13.1",
+    "click>=8.1.7",
+    "rich>=13.7.0",
+    "tqdm>=4.66.2",
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "python-multipart>=0.0.9",
+    "pydantic>=2.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1.0",
+    "pytest-cov>=4.1.0",
+    "pytest-benchmark>=4.0.0",
+    "black>=24.3.0",
+    "ruff>=0.3.3",
+    "mypy>=1.9.0",
+    "ipython>=8.22.0",
+]
+gpu = [
+    "faiss-gpu>=1.7.4",
+]
+cpu = [
+    "faiss-cpu>=1.7.4",
+]
+
+# [project.scripts]
+# face-search = "face_search.cli.main:cli"  # CLI module not yet implemented
+
+[project.urls]
+Homepage = "https://github.com/mustafahathiyari/face-gallery-monorepo"
+Documentation = "https://github.com/mustafahathiyari/face-gallery-monorepo/docs"
+Repository = "https://github.com/mustafahathiyari/face-gallery-monorepo"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+face_search = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["insightface.*", "onnxruntime.*", "faiss.*", "cv2.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "tests",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: marks tests that require GPU",
+    "integration: marks integration tests",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*", "*/web/*"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false

@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  face-gallery:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cpu
+    image: face-gallery:cpu
+    container_name: face-gallery-cpu
+    ports:
+      - "${FACE_VIEWER_PORT:-5050}:5050"
+    volumes:
+      # User data volumes
+      - ${PHOTOS_DIR:-./data/photos}:/app/data/photos:ro
+      - ${COLLECTIONS_DIR:-./data/collections}:/app/data/collections
+      - ${UPLOADS_DIR:-./data/uploads}:/app/data/uploads
+      # Config volume
+      - ./config:/app/config:ro
+    environment:
+      - FACE_VIEWER_HOST=0.0.0.0
+      - FACE_VIEWER_PORT=5050
+      - FACE_VIEWER_DEBUG=${DEBUG:-0}
+    restart: unless-stopped
+    networks:
+      - face-gallery-network
+
+networks:
+  face-gallery-network:
+    driver: bridge
