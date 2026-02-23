@@ -54,9 +54,6 @@ cpu = [
     "faiss-cpu>=1.7.4",
 ]
 
-# [project.scripts]
-# face-search = "face_search.cli.main:cli"  # CLI module not yet implemented
-
 [project.urls]
 Homepage = "https://github.com/mustafahathiyari/face-gallery-monorepo"
 Documentation = "https://github.com/mustafahathiyari/face-gallery-monorepo/docs"

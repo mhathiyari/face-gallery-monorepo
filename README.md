@@ -34,7 +34,15 @@ So I built Face Gallery. It uses the same caliber of face recognition models tha
 
 ## Quick Start
 
-### Option 1: Docker (Recommended)
+### Option 1: pip install (Recommended)
+
+```bash
+pip install -e .[cpu]       # CPU-only (or .[gpu] for CUDA)
+face-gallery init            # creates ~/.face-gallery/ with default config
+face-gallery serve           # starts the web UI on http://localhost:5050
+```
+
+### Option 2: Docker
 
 **With GPU (fastest):**
 ```bash
@@ -52,32 +60,38 @@ docker compose -f docker-compose.cpu.yml up
 
 Open http://localhost:5050 in your browser.
 
-### Option 2: Manual Install
+### Option 3: Dev mode (from repo root)
 
 **Requirements:** Python 3.11+, NVIDIA GPU with CUDA or Apple Silicon (optional but recommended)
 
 ```bash
 git clone https://github.com/mhathiyari/face-gallery-monorepo.git
 cd face-gallery-monorepo
-make install
-make run
-```
-
-Or step by step:
-
-```bash
-pip install -e backend/[cpu]       # or backend/[gpu] for CUDA
-pip install -r frontend/requirements.txt
-python frontend/app.py
+make install       # pip install -e .[cpu,dev]
+make run           # python frontend/app.py
 ```
 
 Open http://localhost:5050 in your browser.
+
+## CLI Usage
+
+```bash
+face-gallery version                           # print installed version
+face-gallery init                              # create ~/.face-gallery/ with default config
+face-gallery serve [--host 0.0.0.0] [--port 5050] [--debug]   # start the web UI
+face-gallery sort /path/to/photos /path/to/output [--eps 0.5] [--min-samples 2]
+```
 
 ## Usage
 
 ### 1. Sort Photos by Person
 
-**Via command line:**
+**Via CLI:**
+```bash
+face-gallery sort ~/Photos/party ~/Photos/sorted
+```
+
+**Via legacy script (dev mode):**
 ```bash
 python backend/examples/sort_images_by_person.py \
   /path/to/photos \
@@ -188,12 +202,13 @@ See [config/README.md](config/README.md) for all options.
 ### Makefile Targets
 
 ```bash
-make install         # Install backend + frontend + dev deps
+make install         # pip install -e .[cpu,dev]
+make install-dev     # same as install
 make test            # Run all tests
 make test-backend    # Backend unit tests only
 make test-frontend   # Frontend smoke tests only
 make lint            # Run ruff + black checks
-make run             # Start the Flask server
+make run             # Start the Flask server (dev mode)
 make docker-gpu      # Build & run GPU Docker image
 make docker-cpu      # Build & run CPU Docker image
 ```
@@ -214,12 +229,11 @@ python -m pytest tests/test_frontend_smoke.py -v
 ### Local Development
 
 ```bash
-# Install in editable mode
-pip install -e backend/[dev,cpu]
-pip install -r frontend/requirements.txt
-pip install -r requirements-dev.txt
+# Install in editable mode (includes both backend and frontend)
+pip install -e .[cpu,dev]
 
-# Run the server
+# Run the server (either way works)
+face-gallery serve
 python frontend/app.py
 ```
 

@@ -1,0 +1,1 @@
+"""face-gallery CLI package."""

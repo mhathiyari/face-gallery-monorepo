@@ -1,11 +1,27 @@
 """
 Configuration loader for Face Gallery frontend.
-Loads from unified config in ../config/ directory.
+Loads from unified config in ../config/ directory or ~/.face-gallery/.
 """
 
 import json
 import os
 from pathlib import Path
+
+# Try to import canonical path resolution from the installed package.
+# Falls back gracefully when face_search is not installed (e.g. raw dev mode
+# without pip install -e).
+try:
+    from face_search.paths import (
+        get_config_path as _pkg_config_path,
+        get_data_home as _pkg_data_home,
+        get_default_collections_dir as _pkg_collections_dir,
+        get_default_photos_dir as _pkg_photos_dir,
+        get_repo_root as _pkg_repo_root,
+        get_uploads_dir as _pkg_uploads_dir,
+    )
+    _HAS_PATHS = True
+except ImportError:
+    _HAS_PATHS = False
 
 
 def load_config():
@@ -13,7 +29,16 @@ def load_config():
     Load configuration from config/config.json.
     Falls back to config.example.json if config.json doesn't exist.
     """
-    # Try to find config directory
+    # If face_search.paths is available, use its canonical config path first
+    if _HAS_PATHS:
+        pkg_path = _pkg_config_path()
+        if pkg_path.is_file():
+            with open(pkg_path, 'r') as f:
+                config = json.load(f)
+            print(f"[CONFIG] Loaded config from: {pkg_path}")
+            return _process_config(config)
+
+    # Try to find config directory (original search order)
     config_paths = [
         Path("/app/config/config.json"),  # Docker path
         Path(__file__).parent.parent / "config" / "config.json",  # Manual install
@@ -91,7 +116,53 @@ def _process_config(config):
 def get_default_config():
     """
     Return default configuration.
+
+    When face_search.paths is available, defaults use absolute paths under
+    ~/.face-gallery/ so the app works from any CWD.  Otherwise falls back
+    to CWD-relative paths for legacy dev-mode compatibility.
     """
+    if _HAS_PATHS:
+        return {
+            "paths": {
+                "photos_dir": str(_pkg_photos_dir()),
+                "collections_dir": str(_pkg_collections_dir()),
+                "uploads_dir": str(_pkg_uploads_dir()),
+                "backend_root": "",
+            },
+            "server": {
+                "host": "0.0.0.0",
+                "port": 5050,
+                "debug": False,
+            },
+            "model": {
+                "name": "buffalo_l",
+                "device": "auto",
+                "min_confidence": 0.5,
+            },
+            "clustering": {
+                "eps": 0.6,
+                "min_samples": 2,
+            },
+            "indexing": {
+                "batch_size": 32,
+                "enable_deduplication": True,
+                "checkpoint_interval": 100,
+            },
+            "search": {
+                "max_results": 10,
+                "min_similarity": 0.8,
+            },
+            "drive": {
+                "credentials_path": "./credentials.json",
+                "token_path": "./token.json",
+                "enabled": False,
+            },
+            "security": {
+                "root_dir": "~",
+            },
+        }
+
+    # Legacy defaults (CWD-relative)
     return {
         "paths": {
             "photos_dir": "./data/photos",

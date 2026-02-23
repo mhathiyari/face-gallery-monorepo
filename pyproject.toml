@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "face-gallery"
+version = "0.1.0"
+description = "Privacy-first, offline face recognition for personal photo organization"
+authors = [{name = "Mustafa Hathiyari", email = "mustafa@example.com"}]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    # Backend (face_search)
+    "numpy>=1.26.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "opencv-python>=4.9.0",
+    "pillow>=10.2.0",
+    "insightface>=0.7.3",
+    "onnxruntime>=1.17.0",
+    "sqlalchemy>=2.0.28",
+    "alembic>=1.13.1",
+    "click>=8.1.7",
+    "rich>=13.7.0",
+    "tqdm>=4.66.2",
+    "pydantic>=2.6.0",
+    # Frontend (face_gallery_frontend)
+    "flask>=2.3",
+    "google-api-python-client>=2.120",
+    "google-auth-httplib2>=0.2.0",
+    "google-auth-oauthlib>=1.2.0",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "faiss-gpu>=1.7.4",
+]
+cpu = [
+    "faiss-cpu>=1.7.4",
+]
+dev = [
+    "pytest>=8.1.0",
+    "pytest-cov>=4.1.0",
+    "pytest-benchmark>=4.0.0",
+    "black>=24.3.0",
+    "ruff>=0.3.3",
+    "mypy>=1.9.0",
+]
+
+[project.scripts]
+face-gallery = "face_search.cli.main:cli"
+
+[project.urls]
+Homepage = "https://github.com/mustafahathiyari/face-gallery-monorepo"
+Documentation = "https://github.com/mustafahathiyari/face-gallery-monorepo/docs"
+Repository = "https://github.com/mustafahathiyari/face-gallery-monorepo"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests", "backend/tests"]
+markers = [
+    "slow: marks tests as slow",
+    "gpu: marks tests that require GPU",
+    "integration: marks integration tests",
+]

@@ -4,13 +4,14 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 import sqlite3
 
 from flask import Flask, jsonify, request, send_file
@@ -21,19 +22,42 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-# Import unified config system
-from config_loader import get_config
+# Import unified config system — works both when installed as a package
+# (face_gallery_frontend.config_loader) and when run from the repo root
+# (config_loader on sys.path via frontend/).
+try:
+    from face_gallery_frontend.config_loader import get_config
+except ImportError:
+    from config_loader import get_config  # type: ignore[no-redef]
+
+# Import canonical path helpers (optional — graceful degradation)
+try:
+    from face_search.paths import (
+        get_collections_json_path,
+        get_settings_json_path,
+        get_uploads_dir as _get_uploads_dir_from_paths,
+    )
+    _HAS_PATHS = True
+except ImportError:
+    _HAS_PATHS = False
 
 
 APP_ROOT = Path(__file__).parent.resolve()
 
-# Legacy paths for backward compatibility
-CONFIG_PATH = APP_ROOT / "config.json"
-COLLECTIONS_PATH = APP_ROOT / "collections.json"
-SETTINGS_PATH = APP_ROOT / "settings.json"
+# --- State file paths ---
+# When face_search.paths is available, state files live under ~/.face-gallery/
+# (or the repo-local location in dev mode).  Otherwise fall back to APP_ROOT.
+if _HAS_PATHS:
+    COLLECTIONS_PATH = get_collections_json_path()
+    SETTINGS_PATH = get_settings_json_path()
+    UPLOADS_DIR = _get_uploads_dir_from_paths()
+else:
+    COLLECTIONS_PATH = APP_ROOT / "collections.json"
+    SETTINGS_PATH = APP_ROOT / "settings.json"
+    UPLOADS_DIR = APP_ROOT / "uploads"
 
-# UPLOADS_DIR will be set from config after loading
-UPLOADS_DIR = APP_ROOT / "uploads"  # Default, will be updated
+# Legacy path kept only for the /api/config POST endpoint
+CONFIG_PATH = APP_ROOT / "config.json"
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
 DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive.file"]
@@ -45,7 +69,7 @@ app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 @dataclass
 class Job:
     job_id: str
-    command: List[str]
+    command: List[str] = field(default_factory=list)
     status: str = "queued"
     logs: List[str] = field(default_factory=list)
     started_at: Optional[float] = None
@@ -62,6 +86,15 @@ class JobManager:
         job = Job(job_id=job_id, command=command)
         with self._lock:
             self._jobs[job_id] = job
+        return job
+
+    def create_function_job(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Job:
+        """Create a job that runs a Python function in a thread, capturing stdout."""
+        job_id = uuid.uuid4().hex
+        job = Job(job_id=job_id, command=["<python-function>"])
+        with self._lock:
+            self._jobs[job_id] = job
+        self._run_function_job(job, func, *args, **kwargs)
         return job
 
     def get_job(self, job_id: str) -> Optional[Job]:
@@ -89,6 +122,30 @@ class JobManager:
                 return_code = process.wait()
                 job.status = "completed" if return_code == 0 else "failed"
             except Exception as exc:  # pragma: no cover - defensive
+                self._append_log(job, f"Job error: {exc}")
+                job.status = "failed"
+            finally:
+                job.finished_at = time.time()
+
+        thread = threading.Thread(target=_run, daemon=True)
+        thread.start()
+
+    def _run_function_job(self, job: Job, func: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
+        """Run a Python function in a background thread, capturing its print output."""
+        import io
+        import contextlib
+
+        def _run() -> None:
+            job.status = "running"
+            job.started_at = time.time()
+            try:
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    func(*args, **kwargs)
+                for line in buf.getvalue().splitlines():
+                    self._append_log(job, line)
+                job.status = "completed"
+            except Exception as exc:
                 self._append_log(job, f"Job error: {exc}")
                 job.status = "failed"
             finally:
@@ -136,7 +193,7 @@ def _load_config() -> Dict[str, Any]:
     config = {
         # Map new paths to old keys
         "root_dir": default_root_dir,
-        "face_search_root": unified_config.get("paths", {}).get("backend_root", "./backend"),
+        "face_search_root": unified_config.get("paths", {}).get("backend_root", ""),
         "drive_credentials_path": unified_config.get("drive", {}).get("credentials_path", str(APP_ROOT / "credentials.json")),
         "drive_token_path": unified_config.get("drive", {}).get("token_path", str(APP_ROOT / "token.json")),
 
@@ -151,7 +208,7 @@ def _get_uploads_dir() -> Path:
     """Get uploads directory from config."""
     config = _load_config()
     unified = config.get("_unified", {})
-    uploads_path = unified.get("paths", {}).get("uploads_dir", str(APP_ROOT / "uploads"))
+    uploads_path = unified.get("paths", {}).get("uploads_dir", str(UPLOADS_DIR))
     uploads_dir = Path(uploads_path).expanduser()
     uploads_dir.mkdir(parents=True, exist_ok=True)
     return uploads_dir
@@ -710,16 +767,27 @@ def sort_job() -> Any:
     _ensure_within_root(input_path, root_dir)
     _ensure_within_root(output_path, root_dir)
 
-    face_search_root = Path(config_data["face_search_root"]).expanduser()
-    script_path = face_search_root / "examples" / "sort_images_by_person.py"
-    if not script_path.exists():
-        return jsonify({"error": "sort_images_by_person.py not found"}), 400
-
     output_path.mkdir(parents=True, exist_ok=True)
 
-    command = ["python", str(script_path), str(input_path), str(output_path)]
-    job = job_manager.create_job(command)
-    job_manager.run_job(job)
+    # Try importable sort function first (installed mode), fall back to subprocess
+    try:
+        from face_search import sort_images_by_person
+
+        job = job_manager.create_function_job(
+            sort_images_by_person,
+            str(input_path),
+            str(output_path),
+        )
+    except ImportError:
+        # Fallback: subprocess (dev mode without pip install -e)
+        face_search_root = Path(config_data["face_search_root"]).expanduser()
+        script_path = face_search_root / "examples" / "sort_images_by_person.py"
+        if not script_path.exists():
+            return jsonify({"error": "sort_images_by_person.py not found"}), 400
+
+        command = ["python", str(script_path), str(input_path), str(output_path)]
+        job = job_manager.create_job(command)
+        job_manager.run_job(job)
 
     settings = _settings()
     settings["last_input_folder"] = str(input_path)
@@ -789,23 +857,31 @@ def search() -> Any:
     if not file.filename:
         return jsonify({"error": "Missing filename"}), 400
 
-    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    uploads_dir = _get_uploads_dir()
+    uploads_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{uuid.uuid4().hex}_{file.filename}"
-    upload_path = UPLOADS_DIR / filename
+    upload_path = uploads_dir / filename
     file.save(upload_path)
 
     config_data = _load_config()
     root_dir = Path(config_data["root_dir"]).expanduser()
     _ensure_within_root(Path(active["path"]).expanduser(), root_dir)
-    face_search_root = Path(config_data["face_search_root"]).expanduser()
-    script_path = face_search_root / "examples" / "find_person_folder_fixed.py"
-    if not script_path.exists():
-        return jsonify({"error": "find_person_folder.py not found"}), 400
 
-    find_person_folder = _find_person_folder_function(script_path)
+    # Try importable find function first, fall back to dynamic script loading
+    find_fn = None
+    try:
+        from face_search import find_person_folder as _find_fn
+        find_fn = _find_fn
+    except ImportError:
+        # Fall back to loading the script file directly
+        face_search_root = Path(config_data["face_search_root"]).expanduser()
+        script_path = face_search_root / "examples" / "find_person_folder_fixed.py"
+        if not script_path.exists():
+            return jsonify({"error": "find_person_folder.py not found"}), 400
+        find_fn = _find_person_folder_function(script_path)
 
     try:
-        result = find_person_folder(
+        result = find_fn(
             str(upload_path),
             active["path"],
             top_k=20,
@@ -990,9 +1066,10 @@ def face_representative(collection_id: str, person_id: str) -> Any:
 
 @app.route("/api/reset-uploads", methods=["POST"])
 def reset_uploads() -> Any:
-    if UPLOADS_DIR.exists():
-        shutil.rmtree(UPLOADS_DIR)
-    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    uploads_dir = _get_uploads_dir()
+    if uploads_dir.exists():
+        shutil.rmtree(uploads_dir)
+    uploads_dir.mkdir(parents=True, exist_ok=True)
     return jsonify({"status": "ok"})
 
 

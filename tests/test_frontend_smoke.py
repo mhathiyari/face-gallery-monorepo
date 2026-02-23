@@ -3,15 +3,21 @@
 import sys
 from pathlib import Path
 
-# Ensure frontend package is importable
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "frontend"))
+# Ensure frontend package is importable (dev mode without pip install)
+_frontend_dir = str(Path(__file__).resolve().parent.parent / "frontend")
+if _frontend_dir not in sys.path:
+    sys.path.insert(0, _frontend_dir)
 
 import pytest
 
 
 @pytest.fixture
 def client():
-    from app import app
+    # Try installed package first, fall back to dev-mode import
+    try:
+        from face_gallery_frontend.app import app
+    except ImportError:
+        from app import app
 
     app.config["TESTING"] = True
     with app.test_client() as client:

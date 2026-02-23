@@ -1,9 +1,10 @@
-.PHONY: install test test-backend test-frontend lint run docker-gpu docker-cpu
+.PHONY: install install-dev test test-backend test-frontend lint run docker-gpu docker-cpu
 
 install:
-	pip install -e backend/[dev,cpu]
-	pip install -r frontend/requirements.txt
-	pip install -r requirements-dev.txt
+	pip install -e .[cpu,dev]
+
+install-dev:
+	pip install -e .[cpu,dev]
 
 test: test-backend test-frontend
 

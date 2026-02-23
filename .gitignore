@@ -22,6 +22,10 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Root package build artifacts
+/face_gallery.egg-info/
+/face-gallery.egg-info/
+
 # Virtual Environment
 .venv/
 venv/
