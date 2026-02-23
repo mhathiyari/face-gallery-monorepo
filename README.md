@@ -10,13 +10,13 @@ Automatically sort your photo collection by the people in them. Fast, private, a
 
 ## Features
 
-- **Smart Face Recognition** - Powered by InsightFace and FAISS
-- **Automatic Clustering** - Groups photos by person automatically
-- **Web Interface** - Browse and manage your photo collections
-- **GPU Accelerated** - Fast processing with CUDA support
-- **Privacy First** - Everything runs locally, your photos never leave your machine
-- **Easy Setup** - Docker or simple install script
-- **Search by Photo** - Find all photos of a person using a sample image
+- **Smart Face Recognition** — Powered by InsightFace and FAISS
+- **Automatic Clustering** — Groups photos by person automatically
+- **Web Interface** — Browse and manage your photo collections
+- **GPU Accelerated** — Fast processing with CUDA / Apple Silicon (MPS) support
+- **Privacy First** — Everything runs locally, your photos never leave your machine
+- **Search by Photo** — Find all photos of a person using a sample image
+- **Google Drive Sharing** — Optionally share collections via Google Drive
 
 ## Quick Start
 
@@ -24,87 +24,116 @@ Automatically sort your photo collection by the people in them. Fast, private, a
 
 **With GPU (fastest):**
 ```bash
-git clone https://github.com/yourusername/face-gallery.git
-cd face-gallery
+git clone https://github.com/mhathiyari/face-gallery-monorepo.git
+cd face-gallery-monorepo
 cp .env.example .env
 # Edit .env to set your photo paths
-docker-compose up
+docker compose up
 ```
 
 **CPU only:**
 ```bash
-docker-compose -f docker-compose.cpu.yml up
+docker compose -f docker-compose.cpu.yml up
 ```
 
 Open http://localhost:5050 in your browser.
 
 ### Option 2: Manual Install
 
-**Requirements:**
-- Python 3.11+
-- NVIDIA GPU with CUDA (optional, but recommended)
+**Requirements:** Python 3.11+, NVIDIA GPU with CUDA or Apple Silicon (optional but recommended)
 
-**Install:**
 ```bash
-git clone https://github.com/yourusername/face-gallery.git
-cd face-gallery
-./scripts/install.sh
+git clone https://github.com/mhathiyari/face-gallery-monorepo.git
+cd face-gallery-monorepo
+make install
+make run
 ```
 
-**Run:**
+Or step by step:
+
 ```bash
-./scripts/run.sh
+pip install -e backend/[cpu]       # or backend/[gpu] for CUDA
+pip install -r frontend/requirements.txt
+python frontend/app.py
 ```
 
 Open http://localhost:5050 in your browser.
 
-## What Does It Do?
+## Usage
 
-1. **Index your photos** - Scans your photo folder and detects faces
-2. **Cluster by person** - Automatically groups faces of the same person
-3. **Browse results** - Web UI to view collections organized by person
-4. **Search** - Find all photos containing a specific person
-5. **Label & Share** - Add names and optionally share via Google Drive
+### 1. Sort Photos by Person
+
+**Via command line:**
+```bash
+python backend/examples/sort_images_by_person.py \
+  /path/to/photos \
+  /path/to/output
+```
+
+**Via web UI:**
+- Toggle "Owner Mode" on
+- Set input and output folder paths
+- Click "Start Sorting"
+
+### 2. Browse Results
+
+- Open http://localhost:5050
+- Click "Add Collection" and enter the path to your sorted folder
+- Browse people cards with face thumbnails
+- Click a person to see all their photos
+- Toggle between cropped faces and full images
+
+### 3. Search by Photo
+
+- Upload a photo of a person
+- View all matching photos across the collection
 
 ## Project Structure
 
 ```
-face-gallery/
-├── backend/              # Face detection & recognition engine
-│   ├── src/face_search/  # Core library
-│   ├── examples/         # Example scripts
-│   └── tests/            # Test suite
-├── frontend/             # Web UI (Flask app)
-│   ├── app.py           # Main application
-│   └── static/          # HTML/CSS/JS
-├── docker/               # Docker configurations
-│   ├── Dockerfile       # GPU-enabled image
-│   └── Dockerfile.cpu   # CPU-only image
-├── scripts/              # Installation & run scripts
-│   ├── install.sh       # One-command installer
-│   └── run.sh           # Start the application
-├── config/               # Configuration files
-│   ├── config.example.json
-│   └── README.md        # Config documentation
-└── data/                 # Your data (created on setup)
-    ├── photos/          # Source photos go here
-    ├── collections/     # Processed collections stored here
-    └── uploads/         # Temporary uploads
+face-gallery-monorepo/
+├── backend/                # Face detection & recognition engine
+│   ├── src/face_search/    # Core library (models, search, storage)
+│   ├── examples/           # CLI scripts (sort_images_by_person.py)
+│   ├── tests/              # Unit & integration tests
+│   └── pyproject.toml      # Backend package config
+├── frontend/               # Web UI (Flask)
+│   ├── app.py              # Main application
+│   ├── config_loader.py    # Configuration system
+│   ├── static/             # HTML / CSS / JS
+│   └── requirements.txt    # Frontend dependencies
+├── config/                 # Configuration
+│   ├── config.example.json # Example config (copy to config.json)
+│   └── README.md           # Config documentation
+├── docker/                 # Docker images
+│   ├── Dockerfile          # GPU-enabled image
+│   └── Dockerfile.cpu      # CPU-only image
+├── scripts/                # Automation
+│   ├── install.sh          # One-command installer
+│   ├── run.sh              # Start the application
+│   └── verify.sh           # Verify installation
+├── tests/                  # Root-level integration tests
+│   └── test_frontend_smoke.py
+├── docs/                   # Setup & installation guides
+├── data/                   # Runtime data (gitignored)
+│   ├── photos/
+│   ├── collections/
+│   └── uploads/
+├── Makefile                # Dev workflow targets
+├── requirements-dev.txt    # Dev dependencies (pytest, ruff, black, mypy)
+├── docker-compose.yml      # GPU Docker Compose
+└── docker-compose.cpu.yml  # CPU Docker Compose
 ```
-
-## Installation Methods Comparison
-
-| Method | Difficulty | GPU Support | Best For |
-|--------|-----------|-------------|----------|
-| Docker + GPU | Easy | ✅ Yes | Most users with NVIDIA GPU |
-| Docker CPU | Easy | ❌ No | Testing, small collections |
-| Manual Install | Medium | ✅ Yes | Developers, custom setups |
 
 ## Configuration
 
-### Basic Configuration
+Copy the example config and customize:
 
-Edit `config/config.json`:
+```bash
+cp config/config.example.json config/config.json
+```
+
+Key settings:
 
 ```json
 {
@@ -112,231 +141,94 @@ Edit `config/config.json`:
     "photos_dir": "./data/photos",
     "collections_dir": "./data/collections"
   },
-  "server": {
-    "port": 5050
-  },
-  "model": {
-    "device": "auto"
-  }
+  "server": { "port": 5050 },
+  "model": { "device": "auto" },
+  "clustering": { "eps": 0.6, "min_samples": 2 }
 }
 ```
 
-See [config/README.md](config/README.md) for full configuration options.
+- **`model.device`**: `"auto"` (detects GPU/MPS), `"cuda"`, `"mps"`, or `"cpu"`
+- **`clustering.eps`**: Lower (0.4) = stricter matching, higher (0.8) = looser
+- **`security.root_dir`**: Root directory for file access (default `"~"`)
 
-### Environment Variables
+See [config/README.md](config/README.md) for all options.
 
-Use `.env` file for Docker or export in shell:
+## Development
+
+### Makefile Targets
 
 ```bash
-PHOTOS_DIR=/path/to/your/photos
-COLLECTIONS_DIR=/path/to/output
-FACE_VIEWER_PORT=5050
+make install         # Install backend + frontend + dev deps
+make test            # Run all tests
+make test-backend    # Backend unit tests only
+make test-frontend   # Frontend smoke tests only
+make lint            # Run ruff + black checks
+make run             # Start the Flask server
+make docker-gpu      # Build & run GPU Docker image
+make docker-cpu      # Build & run CPU Docker image
 ```
 
-## Usage Guide
+### Running Tests
 
-### 1. Add Photos
-
-**Manual install:**
 ```bash
-cp -r /path/to/your/photos/* data/photos/
+# All tests
+make test
+
+# Backend unit tests
+cd backend && python -m pytest tests/unit/ -v
+
+# Frontend smoke tests
+python -m pytest tests/test_frontend_smoke.py -v
 ```
 
-**Docker:**
+### Local Development
+
 ```bash
-# Set PHOTOS_DIR in .env to point to your photos
+# Install in editable mode
+pip install -e backend/[dev,cpu]
+pip install -r frontend/requirements.txt
+pip install -r requirements-dev.txt
+
+# Run with debug mode
+python frontend/app.py
 ```
 
-### 2. Run Face Sorting
+## Architecture
 
-**Via Web UI:**
-- Toggle "Owner Mode"
-- Set input folder path
-- Click "Start Sorting"
-
-**Via Command Line:**
-```bash
-source .venv/bin/activate
-python backend/examples/sort_images_by_person.py \
-  /path/to/photos \
-  /path/to/output
-```
-
-### 3. Browse Results
-
-- Open web UI at http://localhost:5050
-- Click "Add Collection" and select your sorted folder
-- Browse people and photos
-- Toggle between face crops and full images
-
-### 4. Search by Photo
-
-- Click "Search by Image"
-- Upload a photo of a person
-- View all matching photos
-
-## Advanced Features
-
-### Adjust Clustering Sensitivity
-
-Edit `config/config.json`:
-
-```json
-{
-  "clustering": {
-    "eps": 0.6,
-    "min_samples": 2
-  }
-}
-```
-
-- Lower `eps` (0.4): Stricter matching, more clusters
-- Higher `eps` (0.8): Looser matching, fewer clusters
-
-### Google Drive Sharing
-
-1. Get OAuth credentials from Google Cloud Console
-2. Save as `credentials.json` in project root
-3. Enable in config:
-
-```json
-{
-  "drive": {
-    "enabled": true,
-    "credentials_path": "./credentials.json"
-  }
-}
-```
-
-4. Use "Upload to Drive" feature in web UI
-
-### Batch Processing Large Collections
-
-For better performance with large collections:
-
-```json
-{
-  "indexing": {
-    "batch_size": 64,
-    "enable_deduplication": true,
-    "checkpoint_interval": 100
-  }
-}
-```
+- **Backend**: InsightFace (ArcFace embeddings) + FAISS (vector similarity search)
+- **Frontend**: Flask web app with vanilla HTML/CSS/JS
+- **Storage**: SQLite for metadata, FAISS indexes for embeddings
+- **Clustering**: DBSCAN for grouping faces by identity
+- **Representative Selection**: Automatic best-face selection using pose filtering and confidence scoring
 
 ## Performance
 
 | Hardware | Processing Speed | Recommended Batch Size |
 |----------|-----------------|------------------------|
-| NVIDIA RTX 3060+ | 800-1200 faces/sec | 64 |
-| NVIDIA GTX 1060 | 400-600 faces/sec | 32 |
-| CPU (8 cores) | 50-100 faces/sec | 16 |
+| NVIDIA RTX 3060+ | 800–1200 faces/sec | 64 |
+| Apple M1/M2 (MPS) | 200–400 faces/sec | 32 |
+| CPU (8 cores) | 50–100 faces/sec | 16 |
 
 ## Troubleshooting
 
-### GPU not detected
+**GPU not detected:** Check NVIDIA Container Toolkit is installed, or that MPS is available on Apple Silicon.
 
-Check Docker GPU access:
-```bash
-docker run --rm --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi
-```
+**Out of memory:** Lower `indexing.batch_size` to 16 in config.
 
-If that fails, install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html).
-
-### Out of memory
-
-Lower batch size in config:
-```json
-{"indexing": {"batch_size": 16}}
-```
-
-### Too many/few clusters
-
-Adjust `eps` in clustering config:
-- Too many separate clusters? Increase `eps` to 0.7 or 0.8
-- People grouped together incorrectly? Decrease `eps` to 0.5 or 0.4
-
-### Docker build fails
-
-Make sure you have enough disk space (10GB+ recommended) and try:
-```bash
-docker system prune -a
-docker-compose build --no-cache
-```
-
-## Development
-
-### Running Tests
-
-```bash
-source .venv/bin/activate
-cd backend
-pytest
-```
-
-### Backend Development
-
-```bash
-cd backend
-pip install -e .
-# Make changes
-pytest
-```
-
-### Frontend Development
-
-```bash
-cd frontend
-export FACE_VIEWER_DEBUG=1
-python app.py
-```
-
-## Architecture
-
-- **Backend**: Python face recognition engine using InsightFace (ArcFace embeddings) and FAISS (vector similarity search)
-- **Frontend**: Flask web application with simple HTML/JS interface
-- **Storage**: SQLite for metadata, FAISS for vector indexes
-- **Clustering**: DBSCAN algorithm for grouping faces
-
-## Requirements
-
-- Python 3.11+
-- 4GB+ RAM (8GB+ recommended)
-- NVIDIA GPU with CUDA support (optional but recommended)
-- Docker 20.10+ with NVIDIA Container Toolkit (for Docker install)
-
-## License
-
-MIT License - see LICENSE file for details
-
-## Credits
-
-- [InsightFace](https://github.com/deepinsight/insightface) - Face recognition models
-- [FAISS](https://github.com/facebookresearch/faiss) - Vector similarity search
-- [Flask](https://flask.palletsprojects.com/) - Web framework
-
-## Roadmap
-
-- [ ] Multi-user support
-- [ ] Mobile app
-- [ ] Video support
-- [ ] Advanced search filters
-- [ ] Export collections as albums
-- [ ] Cloud deployment guides
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/face-gallery/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/face-gallery/discussions)
+**Too many/few clusters:** Adjust `clustering.eps` — increase to merge more, decrease to split.
 
 ## Privacy & Security
 
-Face Gallery is designed with privacy in mind:
 - All processing happens locally on your machine
 - No data is sent to external services (unless you enable Drive sharing)
-- Your photos never leave your control
 - No telemetry or tracking
 
----
+## License
 
-**Made with ❤️ for the privacy-conscious photographer**
+MIT License — see [LICENSE](LICENSE) for details.
+
+## Credits
+
+- [InsightFace](https://github.com/deepinsight/insightface) — Face recognition models
+- [FAISS](https://github.com/facebookresearch/faiss) — Vector similarity search
+- [Flask](https://flask.palletsprojects.com/) — Web framework
