@@ -1,22 +1,36 @@
 # Face Gallery
 
-> Self-hosted face recognition photo organizer with GPU acceleration
-
-Automatically sort your photo collection by the people in them. Fast, private, and runs entirely on your own hardware.
+> Sort your photos by the people in them — entirely on your own machine.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-brightgreen.svg)
 
+## Why This Exists
+
+Every time I came back from a family trip or a gathering with friends, I'd have hundreds of photos and no good way to organize them. Google Photos does it — but I didn't want my family's faces sitting on someone else's servers, training someone else's models.
+
+I wanted something simple: point it at a folder of photos, let it figure out who's who, and give me a nice way to browse the results. No cloud, no subscriptions, no "we updated our privacy policy" emails. Just my photos, my hardware, my rules.
+
+So I built Face Gallery. It uses the same caliber of face recognition models that power commercial services (InsightFace/ArcFace), but everything runs locally — on your GPU, your laptop, your home server. Your photos never leave your machine.
+
+## What It Does
+
+1. **Scans your photos** and detects every face
+2. **Clusters faces by identity** — figures out which faces belong to the same person
+3. **Organizes everything into folders** — one folder per person, automatically
+4. **Gives you a web UI** to browse, label people, and search by photo
+5. **Picks the best representative photo** for each person (frontal, clear, high-confidence)
+
 ## Features
 
-- **Smart Face Recognition** — Powered by InsightFace and FAISS
-- **Automatic Clustering** — Groups photos by person automatically
-- **Web Interface** — Browse and manage your photo collections
-- **GPU Accelerated** — Fast processing with CUDA / Apple Silicon (MPS) support
-- **Privacy First** — Everything runs locally, your photos never leave your machine
-- **Search by Photo** — Find all photos of a person using a sample image
-- **Google Drive Sharing** — Optionally share collections via Google Drive
+- **Smart Face Recognition** — Powered by InsightFace (ArcFace) and FAISS
+- **Automatic Clustering** — No manual tagging needed, it figures out who's who
+- **Web Interface** — Clean UI to browse collections organized by person
+- **GPU Accelerated** — CUDA, Apple Silicon (MPS), or CPU — it adapts to your hardware
+- **Privacy First** — Zero network calls, zero telemetry, zero data collection
+- **Search by Photo** — Upload a face, find every photo of that person
+- **Google Drive Sharing** — Optionally share organized albums with family
 
 ## Quick Start
 
@@ -153,6 +167,22 @@ Key settings:
 
 See [config/README.md](config/README.md) for all options.
 
+## Performance
+
+| Hardware | Processing Speed | Recommended Batch Size |
+|----------|-----------------|------------------------|
+| NVIDIA RTX 3060+ | 800–1200 faces/sec | 64 |
+| Apple M1/M2 (MPS) | 200–400 faces/sec | 32 |
+| CPU (8 cores) | 50–100 faces/sec | 16 |
+
+## Architecture
+
+- **Backend**: InsightFace (ArcFace embeddings) + FAISS (vector similarity search)
+- **Frontend**: Flask web app with vanilla HTML/CSS/JS
+- **Storage**: SQLite for metadata, FAISS indexes for embeddings
+- **Clustering**: DBSCAN for grouping faces by identity
+- **Representative Selection**: Automatic best-face selection using pose filtering and confidence scoring
+
 ## Development
 
 ### Makefile Targets
@@ -189,25 +219,9 @@ pip install -e backend/[dev,cpu]
 pip install -r frontend/requirements.txt
 pip install -r requirements-dev.txt
 
-# Run with debug mode
+# Run the server
 python frontend/app.py
 ```
-
-## Architecture
-
-- **Backend**: InsightFace (ArcFace embeddings) + FAISS (vector similarity search)
-- **Frontend**: Flask web app with vanilla HTML/CSS/JS
-- **Storage**: SQLite for metadata, FAISS indexes for embeddings
-- **Clustering**: DBSCAN for grouping faces by identity
-- **Representative Selection**: Automatic best-face selection using pose filtering and confidence scoring
-
-## Performance
-
-| Hardware | Processing Speed | Recommended Batch Size |
-|----------|-----------------|------------------------|
-| NVIDIA RTX 3060+ | 800–1200 faces/sec | 64 |
-| Apple M1/M2 (MPS) | 200–400 faces/sec | 32 |
-| CPU (8 cores) | 50–100 faces/sec | 16 |
 
 ## Troubleshooting
 
@@ -219,9 +233,24 @@ python frontend/app.py
 
 ## Privacy & Security
 
-- All processing happens locally on your machine
-- No data is sent to external services (unless you enable Drive sharing)
-- No telemetry or tracking
+This project exists *because* of privacy. There are no analytics, no tracking pixels, no "anonymous usage data." The app makes zero network requests unless you explicitly enable Google Drive sharing. Your photos stay on your disk. Period.
+
+## Roadmap
+
+Here's where I'd like to take this:
+
+- **Video support** — Extract faces from video files, not just photos
+- **Incremental indexing** — Add new photos to an existing collection without re-processing everything
+- **Merge/split clusters** — UI controls to fix clustering mistakes (merge two clusters that are the same person, split one that mixed two people)
+- **Named people library** — Save known identities so new photos auto-sort into existing people
+- **Timeline view** — See a person's photos arranged chronologically
+- **Mobile-friendly UI** — Responsive design for browsing on phones/tablets
+- **NAS integration** — First-class support for Synology/QNAP with a one-click package
+- **Multi-user support** — Separate collections and permissions for family members
+- **Export as album** — Generate shareable photo albums (PDF, static site, zip)
+- **Face quality scoring** — Surface the best photos of each person, not just all of them
+
+If any of these resonate with you, contributions are welcome — or just open an issue to bump priority.
 
 ## License
 
@@ -232,3 +261,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 - [InsightFace](https://github.com/deepinsight/insightface) — Face recognition models
 - [FAISS](https://github.com/facebookresearch/faiss) — Vector similarity search
 - [Flask](https://flask.palletsprojects.com/) — Web framework
+
+---
+
+Built for people who believe their family photos belong to them, not to a cloud provider.
